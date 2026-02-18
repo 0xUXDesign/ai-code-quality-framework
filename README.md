@@ -49,6 +49,7 @@ Includes: Biome config, Knip config, Lefthook pre-commit hooks, Claude Code hook
 | [Stryker](https://stryker-mutator.io) | Mutation testing | Proves tests actually catch bugs |
 | [jscpd](https://github.com/kucherenko/jscpd) | Duplication detection | Finds copy-paste across codebase |
 | [madge](https://github.com/pahen/madge) | Circular deps | Catches architectural tangles |
+| Orphan detection | Unwired export detection | Catches functions with no callers |
 | [Claude Code hooks](https://docs.anthropic.com) | Real-time enforcement | Typecheck on every edit, block sensitive files |
 
 ## Key Concepts
@@ -75,9 +76,13 @@ The secret weapon. Three hooks that run automatically:
 
 - **Post-edit hook** — Typechecks and lints after every file edit. Claude gets instant feedback and fixes issues before moving on.
 - **Pre-write hook** — Blocks writes to `.env`, lock files, `dist/`, and other sensitive files. Claude physically cannot modify them.
-- **Stop hook** — Runs typecheck + lint + knip when Claude tries to finish. If anything is broken or unused code was introduced, Claude is forced to fix it before completing.
+- **Stop hook** — Runs typecheck + lint + knip + orphan check when Claude tries to finish. If anything is broken, unused, or unwired, Claude is forced to fix it before completing.
 
 This creates a closed feedback loop that doesn't exist in other AI coding setups.
+
+### AI Agents Write Unwired Code
+
+LLM coding agents have a systematic failure mode: they write a function, mark the task "done," but never wire it into the execution path. The function is exported but never imported or called. This isn't a prompting problem — it's structural to how LLMs optimize for task completion. The orphan detection script catches this at three gates: Claude Code Stop hook, pre-commit, and CI. Zero escape paths.
 
 ### Builder-Validator Pattern
 

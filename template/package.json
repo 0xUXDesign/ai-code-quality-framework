@@ -15,11 +15,12 @@
     "knip": "knip",
     "duplication": "jscpd src/ --threshold 5",
     "circular": "madge --circular --extensions ts,tsx src/",
-    "quality": "pnpm run build && pnpm run lint && pnpm run knip && pnpm run duplication && pnpm run circular && pnpm test",
-    "precommit": "pnpm run typecheck && pnpm run test && pnpm run lint",
+    "quality": "pnpm run build && pnpm run lint && pnpm run knip && pnpm run check:orphans && pnpm run duplication && pnpm run circular && pnpm test",
+    "precommit": "pnpm run typecheck && pnpm run test && pnpm run lint && pnpm run check:orphans",
     "mutate": "stryker run",
     "mutate:incremental": "stryker run --incremental",
-    "mutate:module": "stryker run --mutate"
+    "mutate:module": "stryker run --mutate",
+    "check:orphans": "bash scripts/check-orphaned-exports.sh"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.14",
