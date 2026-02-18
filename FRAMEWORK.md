@@ -237,6 +237,15 @@ if [ $? -ne 0 ]; then
   exit 2
 fi
 
+# Orphan check (unwired exports)
+if [ -f "scripts/check-orphaned-exports.sh" ]; then
+  bash scripts/check-orphaned-exports.sh 2>&1
+  if [ $? -ne 0 ]; then
+    echo "STOP BLOCKED: Orphaned exports detected. Wire them up or delete them." >&2
+    exit 2
+  fi
+fi
+
 exit 0
 ```
 
@@ -336,7 +345,8 @@ Add to `package.json` scripts (merge with existing, do not replace):
     "knip": "knip",
     "duplication": "jscpd src/ --threshold 5",
     "circular": "madge --circular --extensions ts,tsx src/",
-    "quality": "pnpm run build && pnpm run lint && pnpm run knip && pnpm run duplication && pnpm run circular && pnpm test"
+    "check:orphans": "bash scripts/check-orphaned-exports.sh",
+    "quality": "pnpm run build && pnpm run lint && pnpm run knip && pnpm run check:orphans && pnpm run duplication && pnpm run circular && pnpm test"
   }
 }
 ```
@@ -402,7 +412,70 @@ These are non-negotiable. Hooks enforce most of them automatically.
 
 **IMPORTANT:** The `[FILL IN]` sections must be completed by examining the actual codebase. Do not leave them as placeholders — CLAUDE.md with placeholders is worse than no CLAUDE.md because it signals that instructions don't matter.
 
-#### 1.9 — Create Slash Commands
+#### 1.9 — Create Orphan Detection Script
+
+Create `scripts/check-orphaned-exports.sh` — a lightweight script that finds exported functions with no callers:
+
+```bash
+#!/bin/bash
+# Orphan Export Detector
+# Finds exported functions that are never imported elsewhere.
+# Usage: bash scripts/check-orphaned-exports.sh
+
+set -euo pipefail
+
+SRC_DIR="${1:-src}"
+WARNING_THRESHOLD="${2:-3}"
+orphan_count=0
+orphans=""
+
+# Find all exported functions
+while IFS= read -r file; do
+  while IFS= read -r match; do
+    func_name=$(echo "$match" | grep -oP '(?<=function )\w+')
+    [ -z "$func_name" ] && continue
+
+    # Skip common entry points
+    case "$func_name" in
+      handler|config|main|default) continue ;;
+    esac
+
+    # Search for imports of this function across the codebase
+    import_count=$(grep -rl "\b${func_name}\b" "$SRC_DIR" --include="*.ts" --include="*.tsx" | grep -v "$(basename "$file")" | wc -l || true)
+
+    if [ "$import_count" -eq 0 ]; then
+      orphans="${orphans}  ${file}: ${func_name}()\n"
+      orphan_count=$((orphan_count + 1))
+    fi
+  done < <(grep -nE '^export (async )?function ' "$file" 2>/dev/null || true)
+done < <(find "$SRC_DIR" -name "*.ts" -not -name "*.test.ts" -not -name "*.d.ts" -not -path "*/node_modules/*" 2>/dev/null)
+
+if [ "$orphan_count" -gt 0 ]; then
+  echo "⚠️  ${orphan_count} potentially orphaned exports:"
+  echo -e "$orphans"
+fi
+
+if [ "$orphan_count" -gt "$WARNING_THRESHOLD" ]; then
+  echo "❌ THRESHOLD EXCEEDED: ${orphan_count} orphans (max: ${WARNING_THRESHOLD})"
+  echo "Wire up or delete unused exports before continuing."
+  exit 1
+fi
+
+echo "✅ Orphan check passed (${orphan_count}/${WARNING_THRESHOLD} threshold)"
+exit 0
+```
+
+Make executable: `chmod +x scripts/check-orphaned-exports.sh`
+
+**NOTE:** This is a lightweight bash implementation suitable for most projects. For larger codebases (500+ files), consider a TypeScript version using AST parsing for accuracy. DanBot's production implementation (`scripts/check-orphaned-exports.ts`) adds support for dynamic imports, internal same-file callers, allowlists, and critical/warning severity tiers.
+
+**Why this matters — AI agents write unwired code:**
+
+LLM coding agents have a systematic failure mode: they satisfy the immediate instruction ("write function X") and register "done" without verifying the function is reachable from any entry point. Writing code *feels* like shipping the feature. The wiring step — importing it, registering it in a router, calling it from the right handler — is a separate cognitive step that gets dropped, especially in long sessions where context drifts.
+
+This isn't a bug you can prompt away. It's a structural property of how LLMs optimize for task completion. The only reliable fix is a deterministic gate: the orphan check runs at the Stop hook (blocks Claude Code from finishing), pre-commit (blocks git commit), and CI (blocks merge). Three gates, zero escape paths.
+
+#### 1.10 — Create Slash Commands
 
 Create `.claude/commands/` directory.
 
@@ -501,6 +574,7 @@ For the specified directory (or all tests if none specified):
 - [ ] `npx lefthook install` completes, pre-commit hook fires on `git commit`
 - [ ] CLAUDE.md exists with all `[FILL IN]` sections completed
 - [ ] All 4 slash commands exist and are recognized by Claude Code
+- [ ] `pnpm run check:orphans` runs and produces a report
 - [ ] `pnpm run quality` runs all checks in sequence
 - [ ] No source code in `src/` was modified
 
@@ -608,6 +682,9 @@ jobs:
       - name: Dead code
         run: pnpm run knip
 
+      - name: Orphan check
+        run: pnpm run check:orphans
+
       - name: Duplication
         run: pnpm run duplication
 
@@ -646,7 +723,7 @@ This is a manual GitHub step. Document it here to execute:
 
 - [ ] `npx tsc --noEmit` passes with zero errors (suppressions OK if documented)
 - [ ] `.github/workflows/ci.yml` exists and runs on PR
-- [ ] CI runs all 6 checks: typecheck, lint, knip, jscpd, madge, tests
+- [ ] CI runs all 7 checks: typecheck, lint, knip, orphan check, jscpd, madge, tests
 - [ ] Branch protection requires CI to pass before merge
 - [ ] CI fails correctly when a deliberate error is introduced (test it)
 - [ ] Net LOC tracking appears in PR summary
