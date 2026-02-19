@@ -1,7 +1,7 @@
 # Plan Review — Project Overrides
 
 <!-- Place this file at .claude/plan-review.md in any project to override baseline behavior -->
-<!-- The /plan skill reads this automatically -->
+<!-- The /plan-review skill reads this automatically -->
 
 ## Project-Specific Preferences
 
