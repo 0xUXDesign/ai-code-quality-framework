@@ -1,5 +1,5 @@
 ---
-name: plan
+name: plan-review
 description: Deep plan review with Pharaoh reconnaissance, wiring verification, and structured issue tracking. Use before implementing any feature, refactor, or significant code change. Enters plan mode (no code changes) and provides structured review with decision points.
 allowed-tools: Pharaoh:get_codebase_map, Pharaoh:get_module_context, Pharaoh:search_functions, Pharaoh:query_dependencies, Pharaoh:get_blast_radius, Pharaoh:check_reachability, Pharaoh:get_unused_code, Pharaoh:get_vision_gaps, Pharaoh:get_test_coverage
 ---
