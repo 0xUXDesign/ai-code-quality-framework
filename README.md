@@ -43,7 +43,7 @@ Each phase is written as a **PRD-Lite** - a self-contained specification you can
 
 A ready-to-use project template with everything pre-configured. Use GitHub's "Use this template" button or clone it directly.
 
-Includes: Biome config, Knip config, Lefthook pre-commit hooks, Claude Code hooks (`.claude/settings.json`), Stryker config, Vitest with coverage thresholds, GitHub Actions CI, slash commands (`/plan`, `/wire-check`, `/health-check`, `/audit-tests`), and a `CLAUDE.md` with `[FILL IN]` sections for your project's specifics.
+Includes: Biome config, Knip config, Lefthook pre-commit hooks, Claude Code hooks (`.claude/settings.json`), Stryker config, Vitest with coverage thresholds, GitHub Actions CI, slash commands (`/plan`, `/plan-review`, `/wire-check`, `/health-check`, `/audit-tests`), and a `CLAUDE.md` with `[FILL IN]` sections for your project's specifics.
 
 ## The Toolchain
 
@@ -103,6 +103,14 @@ For critical features, use two Claude Code sessions:
 2. **Validator** (fresh context) reviews with a security + quality checklist
 
 Fresh context catches things the builder's context has normalized. This is the AI equivalent of code review.
+
+### Plan Review
+
+Before implementing any non-trivial change, run `/plan-review`. It enters plan mode - no code changes, just evaluation. Architecture check, wiring verification, test gap analysis, and structured decision points for every issue found.
+
+Inspired by [Garry Tan's planning framework](https://www.youtube.com/watch?v=bMknfKXIFA8) for YC founders, adapted for AI-assisted development and trimmed to what actually matters in a code review. The core idea: force yourself to think before writing. AI makes this worse because writing is so cheap that planning feels like friction. It's not. The 2 minutes you spend in `/plan-review` saves the 45-minute "oh wait, that already existed" rewrite.
+
+Works standalone with codebase search. Lights up with [Pharaoh](https://pharaoh.so) - blast radius checks, function search, reachability verification all happen automatically during the review.
 
 ## Who This Is For
 
