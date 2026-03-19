@@ -28,9 +28,13 @@ knip.json
 lefthook.yml
 .claude/settings.json
 .claude/commands/plan.md
+.claude/commands/plan-review.md
+.claude/commands/sessions.md
 .claude/commands/wire-check.md
 .claude/commands/health-check.md
 .claude/commands/audit-tests.md
+.claude/commands/review.md
+.claude/commands/review-codex.md
 CLAUDE.md
 package.json (devDependencies + scripts only)
 scripts/hooks/post-edit-check.sh
@@ -564,6 +568,113 @@ For the specified directory (or all tests if none specified):
 4. REPORT ONLY — do NOT modify or delete any tests
 ```
 
+**`.claude/commands/sessions.md`**
+```markdown
+---
+description: Generate implementation session prompts from a PRD or research doc
+allowed-tools: Read, Glob, Grep, Bash, Task, AskUserQuestion
+argument: doc-path
+---
+
+Generate self-contained, copy-paste-ready prompts for parallel Claude Code sessions
+that implement a PRD or research document.
+
+## Input Resolution
+
+1. If `$ARGUMENTS` is provided and non-empty, use it as the doc path
+2. If no argument: run `ls -t docs/plans/*.md docs/sessions/*.md 2>/dev/null | head -1`
+3. If nothing found, ask the user which file to use
+4. Print the resolved doc path prominently so the user can confirm
+5. Read the full document content
+
+## Analysis
+
+- Identify logical work units — each = one session = one worktree = one PR
+- Assess complexity (simple/medium/complex)
+- Map dependency graph between sessions
+
+## Output
+
+1. Summary table: sessions, parallelization, dependencies
+2. For each session: a fenced code block with a complete, self-contained prompt
+   (setup, scope, key files, implementation steps, testing, exit criteria, boundaries)
+3. If 2+ implementation sessions: auto-generate a review session that checks all
+   work against the original plan
+
+## Rules
+
+- Plan file must be committed before generating session prompts
+- Each prompt must be self-contained (works in a fresh Claude Code window)
+- Worktree names: kebab-case (e.g., `fix/billing-session-persistence`)
+- Verify file existence before listing in prompts
+- Explicitly tell each session what NOT to touch
+```
+
+See `template/.claude/commands/sessions.md` for the full, detailed version.
+
+**`.claude/commands/review.md`**
+```markdown
+---
+description: Pre-PR code review by a staff engineer sub-agent
+context: fork
+agent: Explore
+---
+
+You are a senior staff engineer reviewing a PR before merge. You are adversarial —
+your job is to find problems, not confirm the code works.
+
+## Branch Awareness
+
+Print branch name and directory at the top of output. If on main with empty diff, STOP.
+
+## Review Checklist
+
+For each changed file, evaluate:
+
+1. Dead code — unused imports, exports, variables, functions
+2. Duplication — search codebase for existing code to reuse
+3. Scope creep — changes unrelated to the branch intent
+4. Test quality — hardcoded expected values, meaningful assertions
+5. Error handling — no swallowed errors, useful messages
+6. Types — no `any`, no unsafe type assertions
+7. Complexity — no functions over 50 lines
+8. Naming — communicates intent
+9. Architecture — fits existing patterns
+10. Security — auth gaps, injection, data exposure, IDOR, secrets in code, CSRF
+
+## Output
+
+File:line findings with BLOCK/WARN/NIT severity and concrete fix suggestions.
+End with: APPROVE, APPROVE WITH WARNINGS, or REQUEST CHANGES.
+```
+
+See `template/.claude/commands/review.md` for the full, detailed version.
+
+**`.claude/commands/review-codex.md`**
+```markdown
+---
+description: Adversarial security review via OpenAI model — second opinion from a different AI
+---
+
+Dispatches your diff to a different AI model (OpenAI) for a cold-start security review.
+Different model = different blind spots. Claude then evaluates each finding.
+
+## Prerequisites
+
+- `OPENAI_API_KEY` environment variable must be set
+- Branch must have changes vs main
+
+## Process
+
+1. Gather context: git diff, codebase recon, security rules from CLAUDE.md
+2. Construct a security-focused prompt with architecture context + review checklist
+3. Dispatch to OpenAI via Chat Completions API
+4. Present findings with Claude's independent assessment (AGREE/DISAGREE/CONTEXT)
+5. Combined verdict: action items ordered by severity + recommendation
+```
+
+See `template/.claude/commands/review-codex.md` for the full, detailed version.
+
 ### Acceptance Criteria
 
 - [ ] `npx biome check src/` runs without crashing (violations OK for now)
@@ -573,7 +684,7 @@ For the specified directory (or all tests if none specified):
 - [ ] Claude Code hooks are configured and active (verify with a test edit)
 - [ ] `npx lefthook install` completes, pre-commit hook fires on `git commit`
 - [ ] CLAUDE.md exists with all `[FILL IN]` sections completed
-- [ ] All 4 slash commands exist and are recognized by Claude Code
+- [ ] All 8 slash commands exist and are recognized by Claude Code (`/plan`, `/plan-review`, `/sessions`, `/wire-check`, `/health-check`, `/audit-tests`, `/review`, `/review-codex`)
 - [ ] `pnpm run check:orphans` runs and produces a report
 - [ ] `pnpm run quality` runs all checks in sequence
 - [ ] No source code in `src/` was modified
@@ -1255,41 +1366,86 @@ echo "Mutation score:" >> reports/cleanup-final.txt
 
 ## Phase 6: Workflow Mastery
 
-**Goal:** Establish the daily/weekly/monthly workflow rhythm and advanced Claude Code patterns that sustain quality over time.
+**Goal:** Establish the full development lifecycle, daily/weekly/monthly rhythms, and advanced Claude Code patterns that sustain quality over time.
 
 **Time estimate:** Ongoing — 30 min/week + 2-3 hours/month
 **Risk level:** None — process changes only
 **Depends on:** Phases 1-5 complete
 
+### The Development Lifecycle
+
+This is the complete lifecycle for any non-trivial task. Not every task needs every step — use judgment — but the full sequence is:
+
+```
+/plan              →  Explore codebase, estimate LOC, get approval
+/plan-review       →  Deep review of the plan before writing code
+/sessions          →  Break work into parallel, isolated sessions (for multi-file tasks)
+   ↓
+ [implement]       →  Hooks enforce quality in real time
+   ↓
+/wire-check        →  Verify everything is connected before commit
+/review            →  Staff-engineer-level code review (sub-agent)
+/review-codex      →  Adversarial security review from a different AI model
+   ↓
+ [PR + CI]         →  Automated quality gates block bad merges
+```
+
+**Why each step matters:**
+
+- **`/plan`** — Search before writing. AI makes writing so cheap that planning feels like friction. The 2 minutes spent in `/plan` saves the 45-minute "that already existed" rewrite.
+- **`/plan-review`** — Deep evaluation of the plan: architecture, wiring, test gaps, performance. For non-trivial changes, use BIG CHANGE mode (full interactive review). For small changes, SMALL CHANGE mode (quick pass through sections 2-4).
+- **`/sessions`** — For tasks touching 3+ files across multiple modules. Decomposes a PRD into self-contained session prompts, each running in its own git worktree. Parallel sessions = velocity. Isolated context = quality. Auto-generates a review session when there are 2+ implementation sessions.
+- **`/wire-check`** — The "did I leave anything undone?" check. Every new export imported, every file reachable, zero type errors, zero lint errors.
+- **`/review`** — Runs a staff engineer sub-agent that reviews your diff adversarially. 10-point checklist including dead code, duplication, test quality, security. BLOCK/WARN/NIT severity with concrete fix suggestions.
+- **`/review-codex`** — Dispatches the diff to a different AI model for cold-start security review. Different model = different blind spots. Claude evaluates each finding (AGREE/DISAGREE/CONTEXT). Requires `OPENAI_API_KEY`.
+
 ### Daily Workflow
+
+#### For small tasks (single file, straightforward changes):
 
 ```
 1. Start Claude Code session
-2. /plan [task description]     ← Forces search + plan before code
-3. Review plan, push back if needed
-4. Let Claude implement (hooks enforce quality in real time)
-5. /wire-check                  ← Verify everything is connected
-6. Review diff, commit
-7. /clear between tasks         ← Prevent context degradation
+2. /plan [task description]     ← Search + plan before code
+3. Review plan, approve
+4. Let Claude implement          ← Hooks enforce quality in real time
+5. /wire-check                   ← Verify everything is connected
+6. /review                       ← Sub-agent reviews the diff
+7. Commit, open PR
+8. /clear between tasks          ← Prevent context degradation
+```
+
+#### For large tasks (multi-file, multi-module):
+
+```
+1. Write or identify the PRD / task document
+2. /plan-review [PRD]            ← Deep plan review before any code
+3. Resolve all issues from the review
+4. /sessions [PRD]               ← Generate parallel session prompts
+5. Open one Claude Code window per session, each in its own worktree
+6. Each session: implement → /wire-check → commit → PR
+7. Review session: verify all work against original plan
+8. /review on each PR            ← Staff engineer review
+9. /review-codex on security-sensitive PRs  ← Cross-model security review
+10. Merge
 ```
 
 ### Weekly Ritual (30 minutes, e.g. Friday)
 
 ```
 1. pnpm run mutate:incremental   ← Find surviving mutants
-2. Fix 3-5 weak tests           ← Improve assertions, not coverage
+2. Fix 3-5 weak tests            ← Improve assertions, not coverage
 3. Delete tests that kill 0 mutants
-4. Review oracle gap trend      ← coverage minus mutation score
-5. Quick /health-check          ← Catch any drift
+4. Review oracle gap trend       ← coverage minus mutation score
+5. Quick /health-check           ← Catch any drift
 ```
 
 ### Monthly Ritual (2-3 hours, e.g. first Monday)
 
 ```
 1. pnpm run quality              ← Full quality suite
-2. npx knip                     ← Remove any accumulated dead code
-3. npx knip --dependencies      ← Remove unused packages
-4. Review jscpd report          ← Consolidate new duplications
+2. npx knip                      ← Remove any accumulated dead code
+3. npx knip --dependencies       ← Remove unused packages
+4. Review jscpd report           ← Consolidate new duplications
 5. Clean up stale feature flags
 6. Update CLAUDE.md Known Debt section
 7. Tighten coverage thresholds by 2%
@@ -1298,26 +1454,36 @@ echo "Mutation score:" >> reports/cleanup-final.txt
 
 ### Advanced Patterns
 
+**Session Parallelism with `/sessions`:**
+Instead of one long Claude Code session that degrades in quality over time, `/sessions` decomposes work into isolated sessions, each in its own git worktree. Benefits:
+- **Context isolation** — each session has fresh context, no degradation
+- **Parallel execution** — independent sessions run simultaneously
+- **Atomic PRs** — each session produces one focused PR
+- **Built-in review** — auto-generated review session checks everything against the plan
+
+```bash
+# /sessions generates prompts. You open separate terminals:
+git worktree add ../project-fix-billing fix/billing
+git worktree add ../project-fix-display fix/display
+# Paste session prompts into separate Claude Code instances
+# Each runs independently, produces a PR
+```
+
+**Cross-Model Review with `/review-codex`:**
+A single AI has consistent blind spots. `/review-codex` sends your diff to a completely different model (OpenAI) for cold-start security review. Claude then evaluates each finding independently. This catches vulnerabilities that either model alone would miss. Set up:
+```bash
+export OPENAI_API_KEY=sk-...  # add to shell profile
+# Then just run /review-codex from any feature branch
+```
+
 **Document & Clear:**
 For long tasks, have Claude write progress to `docs/SESSION.md`, then `/clear` and start a fresh session reading the file. This prevents the context degradation that causes quality to drop in long sessions. Delete `SESSION.md` after task completion.
-
-**Parallel Worktrees:**
-For independent tasks, use git worktrees:
-```bash
-git worktree add ../project-feature-x feature-x
-git worktree add ../project-bugfix-y bugfix-y
-# Run separate Claude Code instances in each
-# Each has isolated context = higher quality
-```
 
 **Builder-Validator Pattern:**
 For critical features, use two Claude Code sessions:
 1. **Builder** implements the feature
-2. **Validator** (fresh context) reviews with security + quality checklist
-Or use a sub-agent:
-```
-/review — uses a sub-agent with a review-focused system prompt
-```
+2. **Validator** (fresh context) runs `/review` and `/review-codex`
+Fresh context catches things the builder's context has normalized.
 
 ### Ratchet Schedule
 
@@ -1325,25 +1491,26 @@ Track these metrics monthly. They should only move in one direction:
 
 | Metric | Direction | Cadence |
 |--------|-----------|---------|
-| Knip issues | → 0 | Weekly |
-| jscpd % | ↓ | Monthly (-0.5%) |
-| Coverage % | ↑ | Monthly (+2%) |
-| Mutation score | ↑ | Monthly (+2%) |
-| Source LOC | ↓ or stable | Monthly |
-| Test/Source ratio | ↓ toward 0.5-0.8 | Monthly |
-| Dependencies count | ↓ or stable | Monthly |
-| Circular deps | → 0 | Monthly |
-| Files > 500 LOC | ↓ | Monthly |
+| Knip issues | toward 0 | Weekly |
+| jscpd % | down | Monthly (-0.5%) |
+| Coverage % | up | Monthly (+2%) |
+| Mutation score | up | Monthly (+2%) |
+| Source LOC | stable or down | Monthly |
+| Test/Source ratio | toward 0.5-0.8 | Monthly |
+| Dependencies count | stable or down | Monthly |
+| Circular deps | toward 0 | Monthly |
+| Files > 500 LOC | down | Monthly |
 
 ### Acceptance Criteria
 
-- [ ] Daily workflow is habitual (Plan → Implement → Wire-check → Clear)
+- [ ] Full lifecycle attempted: /plan → /plan-review → /sessions → implement → /wire-check → /review → PR
+- [ ] Daily workflow is habitual for small tasks (Plan → Implement → Wire-check → Review)
+- [ ] `/sessions` used to parallelize at least one multi-file task
+- [ ] `/review` produces APPROVE/WARN/REQUEST CHANGES verdicts before PRs
+- [ ] `/review-codex` attempted on at least one security-sensitive change (requires `OPENAI_API_KEY`)
 - [ ] Weekly ritual is calendared and happening
 - [ ] Monthly ritual is calendared and happening
 - [ ] Metrics are tracked and trending in the right direction
-- [ ] At least one parallel worktree session attempted
-- [ ] Document & Clear pattern used for a multi-hour task
-- [ ] Template repo used successfully for at least one new project
 
 ---
 
