@@ -71,9 +71,9 @@ Ready-to-use project template with everything pre-configured:
 
 | When | Tool | What It Does |
 |------|------|-------------|
-| **Before writing** | [Pharaoh](https://pharaoh.so) | Query codebase graph — blast radius, function search, dead code |
-| **Before writing** | `/plan` + `/plan-review` | Force planning and deep review before implementation |
-| **Before writing** | `/sessions` | Decompose work into parallel, isolated Claude Code sessions |
+| **Before writing** | [Pharaoh](https://pharaoh.so) + `pharaoh:plan` | Query codebase graph — blast radius, function search, module coupling. Plan with wiring declarations. |
+| **Before writing** | `/plan` + `/plan-review` | Force planning and deep review before implementation (local fallback without Pharaoh) |
+| **Before writing** | `/sessions` or `pharaoh:sessions` | Decompose work into parallel, isolated Claude Code sessions |
 | **Every edit** | [Biome](https://biomejs.dev) | Lint + format. Fast, opinionated, replaces ESLint + Prettier |
 | **Every edit** | Claude Code hooks | Typecheck + lint after each file change. Instant feedback loop |
 | **Before commit** | `/wire-check` | Verify all exports are wired, all files are imported |
@@ -149,6 +149,25 @@ Instead of one long Claude Code session that degrades in quality over time, `/se
 
 ## Getting Started
 
+### Step 0: Install Pharaoh (recommended)
+
+The slash commands in this framework handle enforcement and workflow. [Pharaoh](https://pharaoh.so) adds the intelligence layer - your AI agent queries a knowledge graph instead of reading files one at a time.
+
+```bash
+# Install the GitHub App (maps all your org repos automatically)
+# Visit: github.com/apps/pharaoh-so
+
+# Or connect via MCP:
+npx @pharaoh-so/mcp
+
+# Install the skill library (23 development workflow skills):
+npx @pharaoh-so/mcp --install-skills
+```
+
+Once installed, the `pharaoh:*` skills are graph-powered equivalents of this framework's slash commands - same workflows, but backed by architectural data instead of static analysis. See the [skill mapping](#pharaoh-skill-mapping) below.
+
+### Step 1: Set up the framework
+
 **Option A: Start from scratch with the template**
 ```bash
 # Use the GitHub template, then:
@@ -164,22 +183,42 @@ bash scripts/bootstrap.sh
 3. Paste each phase into Claude Code as a task
 4. Work through sequentially — each phase builds on the last
 
-## Add Codebase Intelligence
+## Pharaoh Skill Mapping
 
-This framework makes your AI write clean code. [Pharaoh](https://pharaoh.so) makes your AI understand your codebase before it starts writing.
+This framework's slash commands run locally with static analysis tools. Pharaoh's `pharaoh:*` skills do the same workflows but backed by a knowledge graph - they see the full architecture, not just the files on disk.
 
-What it answers:
+If you have Pharaoh installed (Step 0), use the graph-powered versions. If not, the local commands still work.
 
-- "What's the blast radius if I change this file?" — traces callers across modules
-- "Does a function like this already exist?" — prevents the duplication Knip catches later
-- "Is this export reachable from any entry point?" — catches dead code before it lands
-- "What breaks if I rename this?" — dependency tracing across repos
+| Framework Command | Pharaoh Skill | What Changes |
+|-------------------|--------------|--------------|
+| `/plan` | `pharaoh:plan` | Adds graph recon (blast radius, existing functions, module coupling) before planning. Wiring declarations prevent dead exports. |
+| `/plan-review` | `pharaoh:plan` (Phase 5) | Adversarial review checks reachability and coupling against graph data, not just code reading. |
+| `/health-check` | `pharaoh:health` | Replaces knip/jscpd/madge with graph queries: dead code, duplication, test coverage, regression risk, spec drift. Grades A-F. |
+| `/audit-tests` | `pharaoh:audit-tests` | Same test classification, plus graph-powered identification of high-risk untested functions. |
+| `/review` | `pharaoh:review` | Adds blast radius, wiring verification, regression risk scoring, and spec alignment to the review checklist. |
+| `/review-codex` | `pharaoh:review-codex` | Same cross-model security review pattern. |
+| `/wire-check` | `pharaoh:wiring` | Graph-based reachability check instead of script-based orphan detection. Catches more cases (re-exports, barrel files, dynamic imports). |
+| `/sessions` | `pharaoh:sessions` | Same session decomposition, with graph context for each session's scope. |
+| — | `pharaoh:debt` | New: categorized tech debt report (DELETE, CONSOLIDATE, DOCUMENT, STABILIZE, TEST). |
+| — | `pharaoh:onboard` | New: rapid codebase orientation from graph data. |
+| — | `pharaoh:refactor` | New: blast-radius-aware refactoring. Maps every caller before changing anything. |
 
-**Install via GitHub App:** [github.com/apps/pharaoh-so/installations/new](https://github.com/apps/pharaoh-so/installations/new)
+The local slash commands and Pharaoh skills are complementary, not exclusive. The enforcement layer (Biome, Knip, Lefthook, CI gates) still runs regardless. Pharaoh adds the intelligence layer that prevents problems before the enforcement layer has to catch them.
 
-If you found this repo useful, use code **IMHOTEP** for 30% off.
+**Install Pharaoh:** [github.com/apps/pharaoh-so](https://github.com/apps/pharaoh-so) | [Docs](https://pharaoh.so/docs) | [Multi-agent playbooks](https://pharaoh.so/docs/guides/multi-agent-teams)
 
-More on AI code quality at [pharaoh.so/blog](https://pharaoh.so/blog).
+## Multi-Agent Teams
+
+For teams running multiple AI agents, Pharaoh ships pre-built playbook configurations:
+
+- **Code Review Team** - coordinator + architecture analyst + code reviewer (all read-only)
+- **Feature Development** - planner + coder + tester with TDD and architectural awareness
+- **Tech Debt Sprint** - auditor grades codebase A-F, fixer implements prioritized cleanup
+- **Codebase Onboarding** - single agent for rapid architecture orientation
+
+Each playbook includes agent configs, workspace files, and setup instructions. Try them on a real repo: [Pharaoh-so/taskflow-api](https://github.com/Pharaoh-so/taskflow-api).
+
+Full playbook docs: [pharaoh.so/docs/guides/multi-agent-teams](https://pharaoh.so/docs/guides/multi-agent-teams)
 
 ## FAQ
 

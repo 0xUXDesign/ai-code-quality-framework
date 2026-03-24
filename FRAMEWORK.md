@@ -12,6 +12,43 @@ This document contains **6 self-contained PRD-Lites**, each executable in a sing
 
 ---
 
+## Phase 0: Codebase Intelligence (recommended)
+
+**Goal:** Install Pharaoh so your AI agent queries a knowledge graph instead of reading files one at a time. This is optional but makes every subsequent phase more effective - the agent sees blast radius, existing functions, and module coupling before making decisions.
+
+**Time estimate:** 5 minutes
+**Risk level:** None - read-only, no code changes
+
+### Steps
+
+#### 0.1 — Install the GitHub App
+
+Visit [github.com/apps/pharaoh-so](https://github.com/apps/pharaoh-so) and install on your org. Pharaoh auto-maps all repos on install and refreshes on every push.
+
+Alternatively, connect via MCP:
+```bash
+npx @pharaoh-so/mcp
+```
+
+#### 0.2 — Install the skill library
+
+```bash
+npx @pharaoh-so/mcp --install-skills
+```
+
+This installs 23 development workflow skills. The `pharaoh:*` skills are graph-powered equivalents of the slash commands installed in Phase 1. See the [skill mapping](https://github.com/0xUXDesign/ai-code-quality-framework#pharaoh-skill-mapping) in the README.
+
+#### 0.3 — Verify
+
+Ask your AI tool:
+```
+Show me the architecture of this repo
+```
+
+If Pharaoh is connected, it will query `get_codebase_map` and return the full module landscape in ~2 seconds.
+
+---
+
 ## Phase 1: Foundation — Toolchain + Enforcement Layer
 
 **Goal:** Install the core static analysis toolchain and Claude Code hooks so that type errors, unused imports, formatting issues, and writes to sensitive files are mechanically blocked during AI generation.
