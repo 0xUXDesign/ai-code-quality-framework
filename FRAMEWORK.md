@@ -36,7 +36,7 @@ npx @pharaoh-so/mcp
 npx @pharaoh-so/mcp --install-skills
 ```
 
-This installs 23 development workflow skills. The `pharaoh:*` skills are graph-powered equivalents of the slash commands installed in Phase 1. See the [skill mapping](https://github.com/0xUXDesign/ai-code-quality-framework#pharaoh-skill-mapping) in the README.
+This installs 23 development workflow skills. The `pharaoh:*` skills are graph-powered equivalents of the slash commands installed in Phase 1. See the [skill mapping](https://github.com/0xUXDesign/ai-codebase-boilerplate#pharaoh-skill-mapping) in the README.
 
 #### 0.3 — Verify
 
