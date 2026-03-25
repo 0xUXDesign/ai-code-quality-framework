@@ -1,12 +1,12 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-# AI Code Quality Framework
+# AI Codebase Boilerplate
 
 **Ship production-quality AI-generated code — without slowing down.**
 
 I manage a team of 15+ engineers building a product that processes $100M+ daily volume. We use Claude Code for nearly everything. Six months in, I noticed a pattern: AI coding tools are incredibly fast, but they silently accumulate debt that kills you later — unused imports, orphan exports, copy-pasted logic, tests that can't actually fail, and a codebase that grows 3x faster than it should.
 
-This framework fixes that with three layers:
+This boilerplate fixes that with three layers:
 
 1. **Enforcement** — Hooks, CI gates, and mutation testing catch bad code mechanically
 2. **Intelligence** — Codebase-aware AI prevents bad decisions before they happen
@@ -202,6 +202,13 @@ If you have Pharaoh installed (Step 0), use the graph-powered versions. If not, 
 | — | `pharaoh:debt` | New: categorized tech debt report (DELETE, CONSOLIDATE, DOCUMENT, STABILIZE, TEST). |
 | — | `pharaoh:onboard` | New: rapid codebase orientation from graph data. |
 | — | `pharaoh:refactor` | New: blast-radius-aware refactoring. Maps every caller before changing anything. |
+| — | `pharaoh:tdd` | New: red-green-refactor discipline with graph-aware test targeting. |
+| — | `pharaoh:debug` | New: root cause analysis with graph-traced call chains. |
+| — | `pharaoh:verify` | New: evidence-based completion checks — run commands, read output, then claim. |
+| — | `pharaoh:execute` | New: plan execution with review checkpoints. |
+| — | `pharaoh:brainstorm` | New: explore intent and design alternatives before implementation. |
+| — | `pharaoh:worktree` | New: isolated feature work in git worktrees with safety verification. |
+| — | `pharaoh:finish` | New: merge/PR/cleanup decision guidance after implementation. |
 
 The local slash commands and Pharaoh skills are complementary, not exclusive. The enforcement layer (Biome, Knip, Lefthook, CI gates) still runs regardless. Pharaoh adds the intelligence layer that prevents problems before the enforcement layer has to catch them.
 

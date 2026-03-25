@@ -1,4 +1,4 @@
-# AI Code Quality Framework — Master Execution Plan
+# AI Codebase Boilerplate — Master Execution Plan
 
 **Scope:** Any React / React Native / TypeScript project
 **Thesis:** Deterministic enforcement + disciplined workflow = production-quality AI-generated code at high velocity.

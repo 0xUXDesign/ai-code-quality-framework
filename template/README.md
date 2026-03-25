@@ -1,8 +1,8 @@
-# Project Template — AI Code Quality Framework
+# Project Template — AI Codebase Boilerplate
 
 Production-quality AI-generated code from day one. Clone this template and start shipping.
 
-> Part of the [AI Code Quality Framework](https://github.com/0xUXDesign/ai-code-quality-framework). See [FRAMEWORK.md](https://github.com/0xUXDesign/ai-code-quality-framework/blob/main/FRAMEWORK.md) for the full execution plan.
+> Part of the [AI Codebase Boilerplate](https://github.com/0xUXDesign/ai-codebase-boilerplate). See [FRAMEWORK.md](https://github.com/0xUXDesign/ai-codebase-boilerplate/blob/main/FRAMEWORK.md) for the full execution plan.
 
 ## What's Included
 
